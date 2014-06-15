@@ -40,18 +40,14 @@ barplot(act.sum,
         main="Total number of steps taken per day")
 ```
 
-Here are the tables of mean and median of total number of steps taken per day
+Here is of mean and median of total number of steps taken per day
 ```{r, echo=TRUE,fig.height=10,fig.width=10}
+act.mean <- mean(act.sum)
+act.median <- median(act.sum)
+act.stats <- rbind(mean=act.mean, median=act.median)
+colnames(act.stats) <- c("value")
 
-act.means <- tapply(act.na.rm$steps, act.na.rm$date, mean)
-act.means <- melt(act.means)
-names(act.means) <- c("date", "steps")
-act.means
-
-act.median <- tapply(act.na.rm$steps, act.na.rm$date, median)
-act.median <- melt(act.median)
-names(act.median) <- c("date", "steps")
-act.median
+act.stats
 ```
 
 ## What is the average daily activity pattern?
@@ -111,15 +107,12 @@ barplot(act.imp.sum,
 Here are the tables of mean and median of imputed total number of steps taken per day
 
 ```{r, echo=TRUE,fig.height=10,fig.width=10}
-act.imp.means <- tapply(act.imp$steps, act.imp$date, mean)
-act.imp.means <- melt(act.imp.means)
-names(act.imp.means) <- c("date", "steps")
-act.imp.means
+act.imp.mean <- mean(act.imp.sum)
+act.imp.median <- median(act.imp.sum)
+act.imp.stats <- rbind(mean=act.imp.mean, median=act.imp.median)
+colnames(act.imp.stats) <- c("value")
 
-act.imp.median <- tapply(act.imp$steps, act.imp$date, median)
-act.imp.median <- melt(act.imp.median)
-names(act.imp.median) <- c("date", "steps")
-act.imp.median
+act.imp.stats
 ```
 
 
