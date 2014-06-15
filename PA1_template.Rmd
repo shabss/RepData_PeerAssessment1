@@ -3,18 +3,139 @@
 
 ## Loading and preprocessing the data
 
+```{r, echo=TRUE}
+library(knitr)
+library(ggplot2)
+library(reshape2)
+library(xtable)
 
+unzip("activity.zip")
+activity <- read.csv("activity.csv", colClasses=c("numeric", "Date", "numeric"))
+act.na.rm <- activity[!is.na(activity$steps),]
+
+#tick markers and their labels. Used for plots
+days.at <- seq(min(activity$date), max(activity$date), by=7)
+days.at.int <- as.numeric(days.at) - as.numeric(min(days.at))
+days.lab <- as.character(days.at, format="%b %d")
+
+int.at <- seq(0,2400, by=300)
+int.lab <- as.character(strptime(sprintf("%04d", int.at), format="%H%M"),
+                        format="%I%p")
+```
 
 ## What is mean total number of steps taken per day?
 
+Here is the histogram of total number of steps taken per day
+```{r, echo=TRUE,fig.height=10,fig.width=10}
+act.sum <- tapply(act.na.rm$steps, act.na.rm$date, sum)
 
+#labels for this barplot
+days.at.1 <- as.Date(labels(act.sum)[[1]], format="%Y-%m-%d")
+days.lab.1 <- as.character(days.at.1, format="%b %d")
+
+barplot(act.sum, 
+        names.arg=days.lab.1, axis.lty=1,
+        col=grey(seq(0.9, 0.1, length.out=7)),
+        xlab="Day", ylab="Total steps",
+        main="Total number of steps taken per day")
+```
+
+Here are the tables of mean and median of total number of steps taken per day
+```{r, echo=TRUE,fig.height=10,fig.width=10}
+
+act.means <- tapply(act.na.rm$steps, act.na.rm$date, mean)
+act.means <- melt(act.means)
+names(act.means) <- c("date", "steps")
+act.means
+
+act.median <- tapply(act.na.rm$steps, act.na.rm$date, median)
+act.median <- melt(act.median)
+names(act.median) <- c("date", "steps")
+act.median
+```
 
 ## What is the average daily activity pattern?
+```{r, echo=TRUE,fig.height=10,fig.width=10}
+act.pat <- tapply(act.na.rm$steps, act.na.rm$interval, mean)
 
+act.pat.melt <- melt(act.pat)
+names(act.pat.melt) <- c("interval", "steps.mean")
 
+#getting the max point and creating its label
+max.pt <- order(act.pat.melt$steps.mean, decreasing=TRUE)[1]
+max.pt <- act.pat.melt[max.pt,]
+max.pt.lab <- "label"
+max.pt.lab <- paste(round(max.pt$steps.mean, 2), "@", 
+                    as.character(strptime(sprintf("%04d", max.pt$interval), 
+                                          format="%H%M"),
+                                 format="%I:%M%p"))
+                    
+plot(act.pat.melt$interval, act.pat.melt$steps.mean, type="l", xaxt="n",
+     xlab="Time", ylab="Average number of steps",
+     main="Average daily activity pattern")
+axis(1, at=int.at, labels=int.lab, cex.axis=0.8)
+points(max.pt$interval, max.pt$steps.mean, col="red", pch=16)
+text(max.pt$interval, max.pt$steps.mean, max.pt.lab, pos=4, col="red")
+```
 
 ## Imputing missing values
 
+There are **`r sum(is.na(activity))` NA values** in activity.csv. Imputing those with the mean of interval column  
+
+Here is the histogram of imputed total number of steps taken per day
+
+```{r, echo=TRUE,fig.height=10,fig.width=10}
+act.na <- activity[is.na(activity),]
+
+#reusing act.pat.melt from previous block
+act.na.imp <- merge(act.na, act.pat.melt, by.x="interval", by.y="interval")
+act.imp <- act.na.imp[, c("steps.mean","date","interval")]
+
+names(act.imp) <- c("steps", "date", "interval")
+act.imp <- rbind(act.na.rm, act.imp)
+
+#getting the sum for each day
+act.imp.sum <- tapply(act.imp$steps, act.imp$date, sum)
+
+#labels for this barplot
+days.at.1 <- seq(min(act.imp$date), max(act.imp$date), by=1)
+days.lab.1 <- as.character(days.at.1, format="%b %d")
+
+barplot(act.imp.sum, 
+        names.arg=days.lab.1, axis.lty=1,
+        col=grey(seq(0.9, 0.1, length.out=7)),
+        xlab="Day", ylab="Total steps",
+        main="Total number of steps taken per day (imputed)")
+```
+
+Here are the tables of mean and median of imputed total number of steps taken per day
+
+```{r, echo=TRUE,fig.height=10,fig.width=10}
+act.imp.means <- tapply(act.imp$steps, act.imp$date, mean)
+act.imp.means <- melt(act.imp.means)
+names(act.imp.means) <- c("date", "steps")
+act.imp.means
+
+act.imp.median <- tapply(act.imp$steps, act.imp$date, median)
+act.imp.median <- melt(act.imp.median)
+names(act.imp.median) <- c("date", "steps")
+act.imp.median
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r, echo=TRUE,fig.height=10,fig.width=10}
+
+#adding at new factor variable to indicate if the day is weekday or weekend
+act.imp$day <- weekdays(as.Date(act.imp$date, format="%Y-%m-%d"), TRUE)
+act.imp$weekend <- act.imp$day %in% c("Sat","Sun")
+act.imp$day.type <- factor(act.imp$weekend, labels=c("Weekday", "Weekend"))
+
+#plot the graph with facets for weekday and weekend
+qp.mean <- qplot(interval, steps, data=act.imp, facets=day.type ~ ., 
+                stat="summary", fun.y="mean", geom="line",
+                ylab="Average steps per 5 minute interval", xlab="Time",
+                main="Activity pattern comparision of weekday and weekend") + 
+                scale_x_continuous(breaks = int.at,labels = int.lab)
+qp.mean
+```
